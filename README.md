@@ -34,14 +34,13 @@ Run it on the victim machine and it will copy itself into startup folder.
 - Unique SID *(Selection ID)*
 
 ## Commands
-<br>
 **Without selected victim:** <br>
-`.s <UUID>` - select the victim by their UUID <br>
+`.s UUID` - select the victim by their UUID <br>
 `.victims` - show all the available victims <br>
 <br>
 **With selected victim:** <br>
 `.victim` - show the selected victim <br>
-`.tokens`- get all the Discord tokens. <br>
+`.tokens` - get all the Discord tokens. <br>
 <br>
 execute the batch script:
 ```
