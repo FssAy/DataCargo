@@ -49,3 +49,6 @@ execute the batch script:
 cd
 ``­`
 ```
+
+## Issues
+ - [Executing bash scripts doesn't work.](https://github.com/DmitrijVC/DataCargo/issues/1)
